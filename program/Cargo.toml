@@ -1,0 +1,18 @@
+[package]
+name = "pinocchio-fundraiser"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+
+[features]
+default = []
+bpf-entrypoint = []
+
+[dependencies]
+pinocchio = "0.11"
+pinocchio-system = "0.6"
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(target_os, values("solana"))'] }
