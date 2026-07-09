@@ -26,10 +26,9 @@ macro_rules! validate_discriminator {
 
 macro_rules! assert_no_padding {
     ($t:ty, $expected:expr) => {
-        const _: ()  = assert!(
+        const _: () = assert!(
             core::mem::size_of::<$t>() == $expected,
-            "Struct size mistmatch - check filed order / padding"
-        )
-    
+            "struct size mismatch — check field order / padding"
+        );
     };
 }

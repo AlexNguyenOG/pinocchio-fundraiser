@@ -1,24 +1,51 @@
-//! On-chain Campaign account.
-//!
-//! WHEN: you need durable state (authority, goal, raised, deadline, bump).
-//! HOW:  #[repr(C)] struct + implement Discriminator / Versioned / AccountSize /
-//!       AccountDeserialize / PdaSeeds / PdaAccount.
-//! WHY:  zero-copy reads are cheap; fixed layout is predictable.
-//!
-//! Account bytes layout:
-//!   [0] disc  [1] version  [2..] Campaign payload
-//!
-//! Suggested fields (order largest → smallest alignment):
-//!   authority: [u8; 32]
-//!   goal: u64
-//!   raised: u64
-//!   deadline: i64   // 0 = no deadline
-//!   bump: u8
-//!   _reserved: [u8; 7]
-//!
-//! DATA_LEN should be 64. Use assert_no_padding!(Campaign, 64).
-//!
-//! PDA seeds: [CAMPAIGN_SEED, authority]
-//! Also add: seeds_for(authority: &[u8; 32]) helper for use *before* state exists.
+use crate::constants::CAMPAIGN_SEED;
+use crate::traits::{
+    AccountDeserialize, AccountSize, Discriminator, PdaAccount, PdaSeeds, Versioned,
+};
 
-// TODO: impl Campaign state + traits
+#[repr(C)] pub struct Campaign {
+    pub authority: [u8; 32],
+    pub goal: u64,
+    pub raised: u64,
+    pub deadline: i64,
+    pub bump: u8,
+    pub _reserved: [u8; 7]
+}
+
+impl AccountSize for Campaign {
+    const DATA_LEN: usize = 64;
+}
+
+impl Discriminator for Campaign {
+    const DISCRIMINATOR: u8 = 1;
+}
+
+impl Versioned for Campaign {
+    const VERSION: u8 = 1;
+}
+
+impl AccountDeserialize for Campaign {
+}
+
+assert_no_padding!(Campaign, Campaign::DATA_LEN);
+
+impl PdaSeeds for Campaign {
+    const PREFIX: &'static [u8] = CAMPAIGN_SEED;
+
+    fn seeds(&self) -> [&[u8]; 2] {
+        [Self::PREFIX, self.authority.as_ref()]
+    }
+}
+
+impl PdaAccount for Campaign {
+    fn bump(&self) -> u8 {
+        self.bump
+    }
+}
+
+impl Campaign {
+    /// PDA seeds before the campaign account exists (used in initialize).
+    pub fn seeds_for(authority: &[u8; 32]) -> [&[u8]; 2] {
+        [CAMPAIGN_SEED, authority.as_ref()]
+    }
+}
