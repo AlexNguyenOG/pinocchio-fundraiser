@@ -1,18 +1,53 @@
-//! Initialize — business logic (OPEN).
-//!
-//! WHEN: accounts + data already validated; now mutate chain state.
-//! HOW:  impl Initialize { fn process(&mut self, program_id) -> ProgramResult }
-//!
-//! Steps (OPEN):
-//!   1. Obtain bump  — Address::derive_program_address(&[b"campaign", authority], &ID)
-//!   2. Provision    — CreateAccount::with_minimum_balance(...).invoke_signed(&[Signer])
-//!   3. Engrave      — campaign.try_borrow_mut → Campaign::init_bytes → fill fields
-//!   4. Note bump    — store bump in state for later withdraw/close
-//!
-//! WHEN invoke_signed vs invoke:
-//!   invoke_signed — PDA must appear as signer (create PDA, PDA sends SOL)
-//!   invoke        — a real keypair already signed the tx (donor transfer)
-//!
-//! WHY useful: create a program-owned tip jar that only THIS program can unlock later.
+use pinocchio::{
+    address::Address,
+    cpi::{Seed, Signer},
+    ProgramResult,
+};
+use pinocchio_system::instructions::CreateAccount;
 
-// TODO: impl Initialize::process
+use crate::constants::CAMPAIGN_SEED;
+use crate::state::Campaign;
+use crate::traits::{AccountDeserialize, AccountSize};
+use crate::ID;
+
+use super::Initialize;
+
+impl<'a> Initialize<'a> {
+    pub fn process(&mut self, _program_id: &Address) -> ProgramResult {
+        // O — obtain bump
+        let authority_bytes = *self.accounts.authority.address().as_array();
+        let seeds = Campaign::seeds_for(&authority_bytes);
+        let (_expected, bump) = Address::derive_program_address(&seeds, &ID)
+            .ok_or(pinocchio::error::ProgramError::InvalidSeeds)?;
+
+        // P — provision account (PDA signs)
+        let bump_seed = [bump];
+        let signer_seeds = [
+            Seed::from(CAMPAIGN_SEED),
+            Seed::from(authority_bytes.as_ref()),
+            Seed::from(&bump_seed),
+        ];
+        let signers = [Signer::from(&signer_seeds)];
+
+        CreateAccount::with_minimum_balance(
+            self.accounts.authority,
+            self.accounts.campaign,
+            Campaign::LEN as u64,
+            &ID,
+            None,
+        )?
+        .invoke_signed(&signers)?;
+
+        // E + N — engrave state and store bump
+        let mut data = self.accounts.campaign.try_borrow_mut()?;
+        let campaign = Campaign::init_bytes(&mut data)?;
+        campaign.authority = authority_bytes;
+        campaign.goal = self.data.goal;
+        campaign.raised = 0;
+        campaign.deadline = self.data.deadline;
+        campaign.bump = bump;
+        campaign._reserved = [0u8; 7];
+
+        Ok(())
+    }
+}

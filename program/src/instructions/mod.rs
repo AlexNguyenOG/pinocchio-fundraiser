@@ -5,18 +5,15 @@ pub mod withdraw;
 
 pub mod impl_instructions;
 
-/// TODO: 1-byte instruction discriminators.
-///
-/// WHEN: routing in lib.rs + building client instruction data.
-/// HOW:  pub mod disc { pub const INITIALIZE: u8 = 0; ... }
-/// WHY:  one byte selects the handler; keeps wire format tiny.
-/// Analogy: remote-control button IDs.
+/// 1-byte instruction discriminators — remote-control button IDs.
 pub mod disc {
-    // TODO
+    pub const INITIALIZE: u8 = 0;
+    pub const DONATE: u8 = 1;
+    pub const WITHDRAW: u8 = 2;
+    pub const CLOSE: u8 = 3;
 }
 
-// After you define_instruction! in each folder, re-export:
-// pub use close::*;
+pub use initialize::*;
 // pub use donate::*;
-// pub use initialize::*;
 // pub use withdraw::*;
+// pub use close::*;

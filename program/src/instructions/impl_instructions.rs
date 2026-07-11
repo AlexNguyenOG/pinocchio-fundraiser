@@ -1,18 +1,31 @@
 //! Glue: accounts + data → one Instruction type.
-//!
-//! WHEN: every instruction that has both accounts and data parsers.
-//! HOW:  macro_rules! define_instruction!($Name, $Accounts, $Data)
-//!       expanding to:
-//!         struct $Name<'a> { accounts: $Accounts, data: $Data }
-//!         TryFrom<(&[u8], &mut [AccountView])>
-//! WHY:  avoid copy-pasting the same TryFrom boilerplate 4 times.
-//!
-//! IMPORTANT: inside the macro, use fully-qualified paths:
-//!   pinocchio::AccountView
-//!   pinocchio::error::ProgramError
-//! (macro hygiene won't see your imports at the call site.)
-//!
-//! Analogy: sandwich press — bread + filling → lunch.
 
-// TODO: define_instruction! macro
-// TODO: pub(crate) use define_instruction;
+macro_rules! define_instruction {
+    ($name:ident, $accounts:ty, $data:ty) => {
+        pub struct $name<'a> {
+            pub accounts: $accounts,
+            pub data: $data,
+        }
+
+        impl<'a> From<($accounts, $data)> for $name<'a> {
+            fn from((accounts, data): ($accounts, $data)) -> Self {
+                Self { accounts, data }
+            }
+        }
+
+        impl<'a> TryFrom<(&'a [u8], &'a mut [pinocchio::AccountView])> for $name<'a> {
+            type Error = pinocchio::error::ProgramError;
+
+            fn try_from(
+                (data, accounts): (&'a [u8], &'a mut [pinocchio::AccountView]),
+            ) -> Result<Self, Self::Error> {
+                Ok(Self {
+                    accounts: <$accounts>::try_from(accounts)?,
+                    data: <$data>::try_from(data)?,
+                })
+            }
+        }
+    };
+}
+
+pub(crate) use define_instruction;

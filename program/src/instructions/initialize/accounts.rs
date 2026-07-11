@@ -1,23 +1,57 @@
-//! Initialize — account validation (the bouncer).
-//!
-//! WHEN: first step of every instruction — before any CPI or writes.
-//! HOW:  struct holding &AccountView / &mut AccountView + TryFrom<&mut [AccountView]>
-//! WHY:  if you skip checks, attackers pass fake accounts and steal funds.
-//!
-//! Expected accounts (ORDER MATTERS — Pinocchio has no name matching):
-//!   0. authority       — signer, writable (pays rent)
-//!   1. campaign        — writable PDA, still System-owned + empty
-//!   2. system_program  — must equal pinocchio_system::ID
-//!
-//! Checklist to memorize (SOW):
-//!   S — Signer?     authority.is_signer()
-//!   O — Owner/ID?   campaign.owned_by(System), system_program.address() == System
-//!   W — Writable?   authority + campaign must be writable
-//!
-//! Also:
-//!   derive_program_address([CAMPAIGN_SEED, authority], &ID) == campaign.address()
-//!   campaign.is_data_empty()  → not already initialized
-//!
-//! Analogy: apartment lease — only the named signer can rent; unit must be vacant.
+use pinocchio::{account::AccountView, address::Address, error::ProgramError};
+use pinocchio_system::ID as SYSTEM_PROGRAM_ID;
 
-// TODO: InitializeAccounts + TryFrom
+use crate::constants::CAMPAIGN_SEED;
+use crate::ID;
+
+pub struct InitializeAccounts<'a> {
+    pub authority: &'a AccountView,
+    pub campaign: &'a mut AccountView,
+    pub system_program: &'a AccountView,
+}
+
+impl<'a> TryFrom<&'a mut [AccountView]> for InitializeAccounts<'a> {
+    type Error = ProgramError;
+
+    fn try_from(accounts: &'a mut [AccountView]) -> Result<Self, Self::Error> {
+        let [authority, campaign, system_program, ..] = accounts else {
+            return Err(ProgramError::NotEnoughAccountKeys);
+        };
+
+        if !authority.is_signer() {
+            return Err(ProgramError::MissingRequiredSignature);
+        }
+        if !authority.is_writable() {
+            return Err(ProgramError::InvalidAccountData);
+        }
+        if !campaign.is_writable() {
+            return Err(ProgramError::InvalidAccountData);
+        }
+        if system_program.address() != &SYSTEM_PROGRAM_ID {
+            return Err(ProgramError::IncorrectProgramId);
+        }
+
+        let (expected, _bump) = Address::derive_program_address(
+            &[CAMPAIGN_SEED, authority.address().as_ref()],
+            &ID,
+        )
+        .ok_or(ProgramError::InvalidSeeds)?;
+
+        if campaign.address() != &expected {
+            return Err(ProgramError::InvalidSeeds);
+        }
+
+        if !campaign.owned_by(&SYSTEM_PROGRAM_ID) {
+            return Err(ProgramError::InvalidAccountOwner);
+        }
+        if !campaign.is_data_empty() {
+            return Err(ProgramError::AccountAlreadyInitialized);
+        }
+
+        Ok(Self {
+            authority,
+            campaign,
+            system_program,
+        })
+    }
+}
