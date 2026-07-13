@@ -6,7 +6,7 @@ use crate::ID;
 pub struct WithdrawAccounts<'a> {
     pub authority: &'a AccountView,
     pub campaign: &'a mut AccountView,
-    pub recipient: &'a AccountView,
+    pub recipient: &'a mut AccountView,
     pub system_program: &'a AccountView,
 }
 

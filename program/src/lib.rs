@@ -19,8 +19,12 @@ use pinocchio::{
     ProgramResult,
 };
 
-/// Program ID — replace with your deployed keypair pubkey after first build.
-pub const ID: Address = Address::new_from_array([0u8; 32]);
+/// Program ID — matches `target/deploy/pinocchio_fundraiser-keypair.json`.
+/// Must not be the all-zero address (that collides with the System Program).
+pub const ID: Address = Address::new_from_array([
+    183, 6, 218, 73, 206, 82, 28, 197, 79, 131, 209, 50, 75, 61, 33, 79, 123, 189, 124, 122, 189,
+    145, 26, 86, 125, 130, 111, 244, 178, 67, 8, 80,
+]);
 
 /// On-chain entrypoint (only when building with `--features bpf-entrypoint`).
 #[cfg(feature = "bpf-entrypoint")]

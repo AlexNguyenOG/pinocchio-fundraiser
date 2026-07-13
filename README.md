@@ -8,5 +8,7 @@ Empty stubs + teaching comments. **You type the code.**
 
 ```bash
 cargo check
+# Mollusk loads the ELF from target/deploy — rebuild after program changes
 cargo build-sbf --features bpf-entrypoint
+cargo test -p pinocchio-fundraiser
 ```

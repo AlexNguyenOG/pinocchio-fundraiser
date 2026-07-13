@@ -1,12 +1,9 @@
 use pinocchio::{
     address::Address,
-    cpi::{Seed, Signer},
     error::ProgramError,
     ProgramResult,
 };
-use pinocchio_system::instructions::Transfer;
 
-use crate::constants::CAMPAIGN_SEED;
 use crate::error::FundraiserError;
 use crate::state::Campaign;
 use crate::traits::{AccountDeserialize, PdaAccount};
@@ -16,7 +13,7 @@ use super::Withdraw;
 impl<'a> Withdraw<'a> {
     pub fn process(&mut self, program_id: &Address) -> ProgramResult {
         // S — Secure
-        let (authority, bump, raised) = {
+        let raised = {
             let data = self.accounts.campaign.try_borrow()?;
             let campaign = Campaign::from_bytes(&data)?;
             campaign.validate_self(self.accounts.campaign, program_id)?;
@@ -25,7 +22,7 @@ impl<'a> Withdraw<'a> {
                 return Err(FundraiserError::Unauthorized.into());
             }
 
-            (campaign.authority, campaign.bump, campaign.raised)
+            campaign.raised
         };
 
         // I — Inventory
@@ -39,21 +36,20 @@ impl<'a> Withdraw<'a> {
             return Err(FundraiserError::InsufficientRaised.into());
         }
 
-        // G — Give (PDA signs)
-        let bump_seed = [bump];
-        let signer_seeds = [
-            Seed::from(CAMPAIGN_SEED),
-            Seed::from(authority.as_ref()),
-            Seed::from(&bump_seed),
-        ];
-        let signers = [Signer::from(&signer_seeds)];
-
-        Transfer {
-            from: self.accounts.campaign,
-            to: self.accounts.recipient,
-            lamports: amount,
-        }
-        .invoke_signed(&signers)?;
+        // G — Give (program owns the campaign → move lamports directly;
+        //     System Transfer rejects `from` accounts that carry data)
+        let campaign_lamports = self.accounts.campaign.lamports();
+        let recipient_lamports = self.accounts.recipient.lamports();
+        self.accounts.campaign.set_lamports(
+            campaign_lamports
+                .checked_sub(amount)
+                .ok_or(ProgramError::ArithmeticOverflow)?,
+        );
+        self.accounts.recipient.set_lamports(
+            recipient_lamports
+                .checked_add(amount)
+                .ok_or(ProgramError::ArithmeticOverflow)?,
+        );
 
         // N — Note
         let mut data = self.accounts.campaign.try_borrow_mut()?;
