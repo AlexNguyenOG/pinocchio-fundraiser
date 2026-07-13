@@ -3,12 +3,19 @@ mod processor;
 
 pub use accounts::*;
 
-// Close has no extra args — only the discriminator byte.
-// TODO: pub struct CloseData; + TryFrom<&[u8]> that ignores leftover / accepts empty
-// TODO: define_instruction!(Close, CloseAccounts<'a>, CloseData);
-pub mod disc {
-    pub const INITIALIZE: u8 = 0;
-    pub const DONATE: u8 = 1;
-    pub const WITHDRAW: u8 = 2;
-    pub const CLOSE: u8 = 3;
+use pinocchio::error::ProgramError;
+
+/// Close has no args beyond the discriminator byte.
+pub struct CloseData;
+
+impl<'a> TryFrom<&'a [u8]> for CloseData {
+    type Error = ProgramError;
+
+    fn try_from(_data: &'a [u8]) -> Result<Self, Self::Error> {
+        Ok(Self)
+    }
 }
+
+use crate::instructions::impl_instructions::define_instruction;
+
+define_instruction!(Close, CloseAccounts<'a>, CloseData);

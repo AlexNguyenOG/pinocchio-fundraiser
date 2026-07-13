@@ -5,4 +5,6 @@ mod processor;
 pub use accounts::*;
 pub use data::*;
 
-// TODO: define_instruction!(Donate, DonateAccounts<'a>, DonateData);
+use crate::instructions::impl_instructions::define_instruction;
+
+define_instruction!(Donate, DonateAccounts<'a>, DonateData);

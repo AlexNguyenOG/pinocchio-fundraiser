@@ -11,7 +11,7 @@ pub mod instructions;
 pub mod state;
 pub mod traits;
 
-use instructions::{disc, Initialize};
+use instructions::{disc, Close, Donate, Initialize, Withdraw};
 use pinocchio::{
     account::AccountView,
     address::Address,
@@ -44,7 +44,18 @@ fn process_instruction(
             let mut ix = Initialize::try_from((data, accounts))?;
             ix.process(program_id)
         }
-        // TODO: DONATE, WITHDRAW, CLOSE
+        Some((&disc::DONATE, data)) => {
+            let mut ix = Donate::try_from((data, accounts))?;
+            ix.process(program_id)
+        }
+        Some((&disc::WITHDRAW, data)) => {
+            let mut ix = Withdraw::try_from((data, accounts))?;
+            ix.process(program_id)
+        }
+        Some((&disc::CLOSE, data)) => {
+            let mut ix = Close::try_from((data, accounts))?;
+            ix.process(program_id)
+        }
         _ => Err(ProgramError::InvalidInstructionData),
     }
 }

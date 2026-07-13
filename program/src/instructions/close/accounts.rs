@@ -1,13 +1,39 @@
-//! Close — account validation.
-//!
-//! WHEN: permanently ending a campaign and reclaiming rent.
-//!
-//! Accounts:
-//!   0. authority  — signer
-//!   1. campaign   — writable, owned by ID
-//!   2. recipient — writable (gets ALL remaining lamports including rent)
-//!
-//! No system_program needed if you move lamports manually + account.close()
-//! (you're not doing a System Transfer CPI for the close path).
+use pinocchio::{account::AccountView, error::ProgramError};
 
-// TODO: CloseAccounts + TryFrom
+use crate::ID;
+
+pub struct CloseAccounts<'a> {
+    pub authority: &'a AccountView,
+    pub campaign: &'a mut AccountView,
+    pub recipient: &'a mut AccountView,
+}
+
+impl<'a> TryFrom<&'a mut [AccountView]> for CloseAccounts<'a> {
+    type Error = ProgramError;
+
+    fn try_from(accounts: &'a mut [AccountView]) -> Result<Self, Self::Error> {
+        let [authority, campaign, recipient, ..] = accounts else {
+            return Err(ProgramError::NotEnoughAccountKeys);
+        };
+
+        if !authority.is_signer() {
+            return Err(ProgramError::MissingRequiredSignature);
+        }
+        if !campaign.is_writable() {
+            return Err(ProgramError::InvalidAccountData);
+        }
+        if !campaign.owned_by(&ID) {
+            return Err(ProgramError::InvalidAccountOwner);
+        }
+        if !recipient.is_writable() {
+            return Err(ProgramError::InvalidAccountData);
+        }
+
+        Ok(Self {
+            authority,
+            campaign,
+            recipient,
+        })
+    }
+}
+

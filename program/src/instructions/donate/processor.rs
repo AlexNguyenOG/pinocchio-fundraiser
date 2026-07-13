@@ -1,16 +1,51 @@
-//! Donate — business logic (TIP).
-//!
-//! Steps (TIP):
-//!   1. Type-check — borrow campaign, Campaign::from_bytes, validate_self (PDA)
-//!   2. Inspect    — if deadline != 0 and Clock::get()?.unix_timestamp >= deadline → err
-//!   3. Pay        — Transfer { from: donor, to: campaign, lamports }.invoke()
-//!                   (plain invoke — donor already signed)
-//!   4. then       — from_bytes_mut, raised = raised.checked_add(amount)
-//!
-//! IMPORTANT: drop borrows BEFORE CPI.
-//!   try_borrow → read fields → end of block → Transfer → try_borrow_mut
-//!
-//! WHEN Clock::get: any time-based rule without trusting a client-passed clock account.
-//! WHY useful: tip jar that auto-locks after a deadline.
+use pinocchio::{
+    address::Address,
+    error::ProgramError,
+    sysvars::{clock::Clock, Sysvar},
+    ProgramResult,
+};
+use pinocchio_system::instructions::Transfer;
 
-// TODO: impl Donate::process
+use crate::error::FundraiserError;
+use crate::state::Campaign;
+use crate::traits::{AccountDeserialize, PdaAccount};
+
+use super::Donate;
+
+impl<'a> Donate<'a> {
+    pub fn process(&mut self, program_id: &Address) -> ProgramResult {
+        // T — type-check campaign + read deadline (drop borrow before CPI)
+        let deadline = {
+            let data = self.accounts.campaign.try_borrow()?;
+            let campaign = Campaign::from_bytes(&data)?;
+            campaign.validate_self(self.accounts.campaign, program_id)?;
+            campaign.deadline
+        };
+
+        // I — inspect deadline (0 = no deadline)
+        if deadline != 0 {
+            let clock = Clock::get()?;
+            if clock.unix_timestamp >= deadline {
+                return Err(FundraiserError::DeadlinePassed.into());
+            }
+        }
+
+        // P — pay (donor already signed → plain invoke)
+        Transfer {
+            from: self.accounts.donor,
+            to: self.accounts.campaign,
+            lamports: self.data.amount,
+        }
+        .invoke()?;
+
+        // Update raised
+        let mut data = self.accounts.campaign.try_borrow_mut()?;
+        let campaign = Campaign::from_bytes_mut(&mut data)?;
+        campaign.raised = campaign
+            .raised
+            .checked_add(self.data.amount)
+            .ok_or(ProgramError::ArithmeticOverflow)?;
+
+        Ok(())
+    }
+}

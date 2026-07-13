@@ -13,7 +13,7 @@ pub mod disc {
     pub const CLOSE: u8 = 3;
 }
 
+pub use close::*;
+pub use donate::*;
 pub use initialize::*;
-// pub use donate::*;
-// pub use withdraw::*;
-// pub use close::*;
+pub use withdraw::*;

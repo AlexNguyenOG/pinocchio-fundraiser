@@ -1,9 +1,27 @@
-//! Withdraw — instruction data.
-//!
-//! Layout: [0..8] amount (u64 LE), must be > 0.
-//! Convention: amount == u64::MAX means "withdraw all raised".
-//!
-//! WHEN: you want flexible partial or full withdrawals.
-//! WHY:  avoid forcing clients to know exact raised balance for a full drain.
+use pinocchio::error::ProgramError;
 
-// TODO: WithdrawData + TryFrom
+use crate::error::FundraiserError;
+
+pub struct WithdrawData {
+    pub amount: u64,
+}
+
+impl<'a> TryFrom<&'a [u8]> for WithdrawData {
+    type Error = ProgramError;
+
+    fn try_from(data: &'a [u8]) -> Result<Self, Self::Error> {
+        require_len!(data, 8);
+
+        let amount = u64::from_le_bytes(
+            data[0..8]
+                .try_into()
+                .map_err(|_| ProgramError::InvalidInstructionData)?,
+        );
+
+        if amount == 0 {
+            return Err(FundraiserError::InvalidAmount.into());
+        }
+
+        Ok(Self { amount })
+    }
+}
