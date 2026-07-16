@@ -4,6 +4,7 @@ use pinocchio::{
     sysvars::{clock::Clock, Sysvar},
     ProgramResult,
 };
+
 use pinocchio_system::instructions::Transfer;
 
 use crate::error::FundraiserError;
@@ -14,7 +15,7 @@ use super::Donate;
 
 impl<'a> Donate<'a> {
     pub fn process(&mut self, program_id: &Address) -> ProgramResult {
-        // T — type-check campaign + read deadline (drop borrow before CPI)
+        // T - type-check campaign + read deadline (drop borrow before CPI)
         let deadline = {
             let data = self.accounts.campaign.try_borrow()?;
             let campaign = Campaign::from_bytes(&data)?;
@@ -22,15 +23,15 @@ impl<'a> Donate<'a> {
             campaign.deadline
         };
 
-        // I — inspect deadline (0 = no deadline)
+        // I - inspect deadline (0 = no deadline)
         if deadline != 0 {
             let clock = Clock::get()?;
             if clock.unix_timestamp >= deadline {
                 return Err(FundraiserError::DeadlinePassed.into());
             }
         }
+        // P - pay (donor already signed -> plain invoke)
 
-        // P — pay (donor already signed → plain invoke)
         Transfer {
             from: self.accounts.donor,
             to: self.accounts.campaign,
@@ -38,7 +39,7 @@ impl<'a> Donate<'a> {
         }
         .invoke()?;
 
-        // Update raised
+        //Update raised
         let mut data = self.accounts.campaign.try_borrow_mut()?;
         let campaign = Campaign::from_bytes_mut(&mut data)?;
         campaign.raised = campaign

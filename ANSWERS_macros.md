@@ -1,82 +1,42 @@
-# Macros.rs — Answer Sheet
+# Macro answers (short)
 
-Write your answers under each question. This file is markdown only — it does **not** get compiled into the program.
+Step 1 full answers (constants + macros + error): **[answers/step-01-foundation.md](./answers/step-01-foundation.md)**
 
-Tip: keep answers short (1–3 sentences). Depth beats length.
+Index of all steps: **[ANSWERS.md](./ANSWERS.md)**
 
----
+## `program/src/utils/macros.rs`
 
-## Q1. Error types
+```rust
+macro_rules! require_len {
+    ($data:expr, $len:expr) => {
+        if $data.len() < $len {
+            return Err(pinocchio::error::ProgramError::InvalidInstructionData);
+        }
+    };
+}
 
-What’s the difference between `InvalidInstructionData` and `InvalidAccountData`?  
-When would you use each?
+macro_rules! require_account_len {
+    ($data:expr, $len:expr) => {
+        if $data.len() < $len {
+            return Err(pinocchio::error::ProgramError::InvalidAccountData);
+        }
+    };
+}
 
-**Your answer:**
+macro_rules! validate_discriminator {
+    ($data:expr, $disc:expr) => {
+        if $data.is_empty() || $data[0] != $disc {
+            return Err(pinocchio::error::ProgramError::InvalidAccountData);
+        }
+    };
+}
 
-
-
----
-
-## Q2. Length before parse
-
-Why check length **before** doing something like `data[0..8].try_into()` / `from_le_bytes`?
-
-**Your answer:**
-
-
-
----
-
-## Q3. Empty discriminator
-
-Why does `validate_discriminator!` also need to reject **empty** data (not only “wrong `data[0]`”)?
-
-**Your answer:**
-
-
-
----
-
-## Q4. Disc size
-
-Pinocchio account discriminators are **1 byte**. Anchor’s are **8 bytes**.  
-Why does that matter when writing this macro / reading account data?
-
-**Your answer:**
-
-
-
----
-
-## Q5. Compile-time assert
-
-`assert_no_padding!` fails at **compile time**.  
-How is that more useful than finding a size mismatch only at runtime on-chain?
-
-**Your answer:**
-
-
-
----
-
-## Q6. Macro vs function
-
-These are `macro_rules!`, not normal functions.  
-Why is a macro a better fit for “`return Err(...)` out of the **caller**”?
-
-**Your answer:**
-
-
-
----
-
-## Optional: what you’ll write
-
-After answering, implement in `program/src/utils/macros.rs`:
-
-1. `require_len!($data, $len)` → `InvalidInstructionData`
-2. `require_account_len!($data, $len)` → `InvalidAccountData`
-3. `validate_discriminator!($data, $disc)` → empty or wrong byte 0 → `InvalidAccountData`
-4. `assert_no_padding!($t, $expected)` → compile-time `size_of` check
-
-When you’re done answering (and typing macros), say so here or in chat and we’ll review.
+macro_rules! assert_no_padding {
+    ($t:ty, $expected:expr) => {
+        const _: () = assert!(
+            core::mem::size_of::<$t>() == $expected,
+            "struct size mismatch — check field order / padding"
+        );
+    };
+}
+```

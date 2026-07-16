@@ -1,6 +1,18 @@
+# Answers — Step 2 — traits
+
+> Practice stubs live under `program/src/`. Type first; peek here only when stuck.
+
+## Step 2 — `program/src/traits/mod.rs`
+
+```rust
 //! Shared traits for zero-copy accounts + PDAs.
 
-use pinocchio::{account::AccountView, address::Address, error::ProgramError, ProgramResult};
+use pinocchio::{
+    account::AccountView,
+    address::Address,
+    error::ProgramError,
+    ProgramResult,
+};
 
 /// 1-byte type tag stored at account data[0].
 pub trait Discriminator {
@@ -44,7 +56,6 @@ pub trait AccountDeserialize: Sized + Discriminator + AccountSize + Versioned {
 pub trait PdaSeeds {
     const PREFIX: &'static [u8];
 
-    /// Seeds from *this* account's fields (authority lives on the struct).
     fn seeds(&self) -> [&[u8]; 2];
 
     fn derive_address(&self, program_id: &Address) -> (Address, u8) {
@@ -74,3 +85,5 @@ pub trait PdaAccount: PdaSeeds {
         self.validate_pda(account, program_id, self.bump())
     }
 }
+```
+

@@ -1,4 +1,13 @@
-//! Pinocchio Fundraiser — practice rebuild.
+# Answers — Step 6 — lib.rs router + ID
+
+> Practice stubs live under `program/src/`. Type first; peek here only when stuck.
+
+## Step 6 — `program/src/lib.rs`
+
+_ID bytes must match your deploy keypair (not zeros)._
+
+```rust
+//! Pinocchio Fundraiser — on-chain SOL crowdfunding campaign.
 
 #![cfg_attr(target_os = "solana", no_std)]
 
@@ -11,9 +20,13 @@ pub mod instructions;
 pub mod state;
 pub mod traits;
 
-// Withdraw / Close get added as you finish those steps.
-use instructions::{disc, Donate, Initialize};
-use pinocchio::{account::AccountView, address::Address, error::ProgramError, ProgramResult};
+use instructions::{disc, Close, Donate, Initialize, Withdraw};
+use pinocchio::{
+    account::AccountView,
+    address::Address,
+    error::ProgramError,
+    ProgramResult,
+};
 
 /// Program ID — matches `target/deploy/pinocchio_fundraiser-keypair.json`.
 /// Must not be the all-zero address (that collides with the System Program).
@@ -48,7 +61,16 @@ fn process_instruction(
             let mut ix = Donate::try_from((data, accounts))?;
             ix.process(program_id)
         }
-        // TODO steps 8–9: wire Withdraw / Close here
+        Some((&disc::WITHDRAW, data)) => {
+            let mut ix = Withdraw::try_from((data, accounts))?;
+            ix.process(program_id)
+        }
+        Some((&disc::CLOSE, data)) => {
+            let mut ix = Close::try_from((data, accounts))?;
+            ix.process(program_id)
+        }
         _ => Err(ProgramError::InvalidInstructionData),
     }
 }
+```
+

@@ -1,4 +1,3 @@
-
 macro_rules! require_len {
     ($data:expr, $len:expr) => {
         if $data.len() < $len {
@@ -22,7 +21,6 @@ macro_rules! validate_discriminator {
         }
     };
 }
-     
 
 macro_rules! assert_no_padding {
     ($t:ty, $expected:expr) => {

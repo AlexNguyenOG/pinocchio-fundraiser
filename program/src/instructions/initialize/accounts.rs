@@ -31,11 +31,9 @@ impl<'a> TryFrom<&'a mut [AccountView]> for InitializeAccounts<'a> {
             return Err(ProgramError::IncorrectProgramId);
         }
 
-        let (expected, _bump) = Address::derive_program_address(
-            &[CAMPAIGN_SEED, authority.address().as_ref()],
-            &ID,
-        )
-        .ok_or(ProgramError::InvalidSeeds)?;
+        let (expected, _bump) =
+            Address::derive_program_address(&[CAMPAIGN_SEED, authority.address().as_ref()], &ID)
+                .ok_or(ProgramError::InvalidSeeds)?;
 
         if campaign.address() != &expected {
             return Err(ProgramError::InvalidSeeds);

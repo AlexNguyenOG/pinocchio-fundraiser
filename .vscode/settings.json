@@ -1,0 +1,25 @@
+{
+  // Practice mode — autocomplete off for retention.
+  // Delete this file (or these keys) when you want suggestions back.
+
+  "editor.quickSuggestions": {
+    "other": false,
+    "comments": false,
+    "strings": false
+  },
+  "editor.suggestOnTriggerCharacters": false,
+  "editor.wordBasedSuggestions": "off",
+  "editor.parameterHints.enabled": false,
+  "editor.inlineSuggest.enabled": false,
+  "editor.acceptSuggestionOnCommitCharacter": false,
+  "editor.acceptSuggestionOnEnter": "off",
+  "editor.tabCompletion": "off",
+  "editor.snippetSuggestions": "none",
+  "editor.suggest.enabled": false,
+
+  // Cursor Tab / AI inline completions
+  "cursor.completions.enabled": false,
+  "cursor.cpp.enablePartialAccepts": false,
+  "cursor.cpp.disabledLanguages": ["rust", "markdown"],
+  "cursor.general.enableTab": false
+}
