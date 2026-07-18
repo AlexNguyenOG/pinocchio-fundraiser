@@ -1,12 +1,26 @@
-//! Withdraw args: amount:u64. Reject 0.
-//! (u64::MAX can mean "withdraw all raised" in process.)
-//!
-//! ★ STEP 8
-
 use pinocchio::error::ProgramError;
 
-// TODO: pub struct WithdrawData { pub amount: u64 }
-// TODO: impl TryFrom<&[u8]> for WithdrawData
+use crate::error::FundraiserError;
 
-#[allow(dead_code)]
-type _Keep = ProgramError;
+pub struct WithdrawData {
+    pub amount: u64,
+}
+
+impl<'a> TryFrom<&'a [u8]> for WithdrawData {
+    type Error = ProgramError;
+
+    fn try_from(data: &'a [u8]) -> Result<Self, Self::Error> {
+        require_len!(data, 8);
+
+        let amount = u64::from_le_bytes(
+            data[0..8]
+                .try_into()
+                .map_err(|_| ProgramError::InvalidInstructionData)?,
+        );
+
+        if amount == 0 {
+            return Err(FundraiserError::InvalidAmount.into());
+        }
+        Ok(Self { amount })
+    }
+}

@@ -1,13 +1,55 @@
-//! Close processor — mnemonic END.
-//!
-//! ★ STEP 9
-//! E — enforce (authority + goal met OR deadline passed)  
-//! N — nudge all lamports to recipient  
-//! D — destroy (campaign.close())  
+use pinocchio::{
+    address::Address,
+    error::ProgramError,
+    sysvars::{clock::Clock, Sysvar},
+    ProgramResult,
+};
 
-use pinocchio::{address::Address, ProgramResult};
+use crate::error::FundraiserError;
+use crate::state::Campaign;
+use crate::traits::{AccountDeserialize, PdaAccount};
 
-// TODO: impl Close { pub fn process(...) -> ProgramResult }
+use super::Close;
 
-#[allow(dead_code)]
-type _Keep = (Address, ProgramResult);
+impl<'a> Close<'a> {
+    pub fn process(&mut self, program_id: &Address) -> ProgramResult {
+        // E — Enforce
+        let (goal, raised, deadline) = {
+            let data = self.accounts.campaign.try_borrow()?;
+            let campaign = Campaign::from_bytes(&data)?;
+            campaign.validate_self(self.accounts.campaign, program_id)?;
+
+            if self.accounts.authority.address().as_array() != &campaign.authority {
+                return Err(FundraiserError::Unauthorized.into());
+            }
+
+            (campaign.goal, campaign.raised, campaign.deadline)
+        };
+
+        let goal_met = raised >= goal;
+        let expired = if deadline == 0 {
+            false
+        } else {
+            Clock::get()?.unix_timestamp >= deadline
+        };
+
+        if !(goal_met || expired) {
+            return Err(FundraiserError::CannotClose.into());
+        }
+
+        // N — nudge all lamports to recipient
+        let lamports = self.accounts.campaign.lamports();
+        let recipient_lamports = self.accounts.recipient.lamports();
+        self.accounts.recipient.set_lamports(
+            recipient_lamports
+                .checked_add(lamports)
+                .ok_or(ProgramError::ArithmeticOverflow)?,
+        );
+        self.accounts.campaign.set_lamports(0);
+
+        // D — destroy
+        self.accounts.campaign.close()?;
+
+        Ok(())
+    }
+}

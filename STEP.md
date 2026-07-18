@@ -11,7 +11,12 @@ Answers (per step — no scrolling): **[answers/](./answers/)** · index **[ANSW
 | 2 | `traits/mod.rs` | ✅ done |
 | 3 | `state/campaign.rs` | ✅ done |
 | 4 | `instructions/impl_instructions.rs` + discs | ✅ done |
-| **5** | `initialize/` | **← you are here** → [`answers/step-05-initialize.md`](./answers/step-05-initialize.md) |
+| 5 | `initialize/` | ✅ done |
+| 6 | Wire `lib.rs` | ✅ done |
+| 7 | `donate/` | ✅ done |
+| 8 | `withdraw/` | ✅ done |
+| 9 | `close/` | ✅ done |
+| **10** | Mollusk tests | **← you are here** → [`answers/step-10-tests.md`](./answers/step-10-tests.md) |
 | 4 | `instructions/impl_instructions.rs` + discs | [`answers/step-04-instruction-glue.md`](./answers/step-04-instruction-glue.md) |
 | 5 | `initialize/` | [`answers/step-05-initialize.md`](./answers/step-05-initialize.md) |
 | 6 | Wire `lib.rs` | [`answers/step-06-lib-router.md`](./answers/step-06-lib-router.md) |
